@@ -93,15 +93,14 @@
 
 (define-private (should-rebalance (strategy-id uint))
     (let ((strategy (unwrap! (map-get? strategies strategy-id) false))
-          (last-rebalance (get last-rebalance strategy))
-          (current-block block-height))
-        (>= (- current-block last-rebalance) REBALANCE_COOLDOWN)))
+          (last-rebalance (get last-rebalance strategy)))
+        (>= (- burn-block-height last-rebalance) REBALANCE_COOLDOWN)))
 
 (define-private (execute-rebalance-internal (strategy-id uint))
     (let ((strategy (unwrap! (map-get? strategies strategy-id) ERR_STRATEGY_NOT_FOUND)))
         (map-set strategies strategy-id
             (merge strategy {
-                last-rebalance: block-height
+                last-rebalance: burn-block-height
             }))
         (ok true)))
 
@@ -121,7 +120,7 @@
             volatility: u150,
             sharpe-ratio: u120,
             max-drawdown: u50,
-            last-calculated: block-height
+            last-calculated: burn-block-height
         })
         (ok return-rate)))
 
@@ -144,8 +143,8 @@
                 current-balance: u0,
                 active: true,
                 paused: false,
-                created-at: block-height,
-                last-rebalance: block-height
+                created-at: burn-block-height,
+                last-rebalance: burn-block-height
             })
             
             (var-set strategy-counter new-strategy-id)
@@ -175,8 +174,8 @@
             
             (map-set user-positions user-key {
                 amount-deposited: (+ (get amount-deposited existing-position) amount),
-                deposit-block: block-height,
-                last-reward-claim: block-height,
+                deposit-block: burn-block-height,
+                last-reward-claim: burn-block-height,
                 pending-rewards: (get pending-rewards existing-position),
                 shares: (+ (get shares existing-position) shares)
             })
@@ -223,8 +222,8 @@
         (let ((risk-score (assess-portfolio-risk strategy-id)))
             (asserts! (<= risk-score u4) ERR_RISK_THRESHOLD_EXCEEDED)
             
-            (execute-rebalance-internal strategy-id)
-            (update-strategy-performance strategy-id)
+            (unwrap! (execute-rebalance-internal strategy-id) ERR_STRATEGY_NOT_FOUND)
+            (unwrap! (update-strategy-performance strategy-id) ERR_STRATEGY_NOT_FOUND)
             
             (ok true))))
 
@@ -284,7 +283,7 @@
             risk-score: risk-score,
             current-apy: u0,
             tvl: u0,
-            last-updated: block-height
+            last-updated: burn-block-height
         })
         
         (ok true)))

@@ -155,7 +155,7 @@
             portfolio-id: portfolio-id,
             user: tx-sender,
             amount: amount,
-            request-block: block-height,
+            request-block: burn-block-height,
             status: "pending",
             priority: priority,
             emergency: is-emergency
@@ -172,7 +172,7 @@
         
         ;; Check if sufficient time has passed (unless emergency)
         (asserts! (or (get emergency request)
-                     (>= (- block-height (get request-block request)) WITHDRAWAL_DELAY))
+                     (>= (- burn-block-height (get request-block request)) WITHDRAWAL_DELAY))
                  ERR_WITHDRAWAL_PENDING)
         
         ;; Check sufficient balance
@@ -224,8 +224,8 @@
                 available-balance: initial-deposit,
                 locked-balance: u0,
                 risk-level: risk-level,
-                created-at: block-height,
-                last-rebalance: block-height,
+                created-at: burn-block-height,
+                last-rebalance: burn-block-height,
                 status: "active",
                 performance: {
                     total-deposits: initial-deposit,
@@ -316,7 +316,7 @@
                 (merge portfolio {
                     available-balance: (- (get available-balance portfolio) amount),
                     locked-balance: (+ (get locked-balance portfolio) amount),
-                    last-rebalance: block-height
+                    last-rebalance: burn-block-height
                 }))
             
             (ok true))))
@@ -343,7 +343,7 @@
         (map-set emergency-contacts contact {
             authorized: true,
             permissions: permissions,
-            added-at: block-height
+            added-at: burn-block-height
         })
         
         (ok true)))
@@ -354,13 +354,13 @@
 
 (define-read-only (get-portfolio-composition (portfolio-id uint))
     (match (map-get? portfolios portfolio-id)
-        portfolio {
+        portfolio (some {
             total-balance: (get total-balance portfolio),
             available-balance: (get available-balance portfolio),
             locked-balance: (get locked-balance portfolio),
             allocations: (get allocations portfolio),
             performance: (get performance portfolio)
-        }
+        })
         none))
 
 (define-read-only (get-withdrawal-request (request-id uint))
@@ -419,7 +419,7 @@
             
             (map-set portfolio-snapshots {
                 portfolio-id: portfolio-id,
-                timestamp: block-height
+                timestamp: burn-block-height
             } {
                 balance: current-value,
                 allocations: (get allocations portfolio),
